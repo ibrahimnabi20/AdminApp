@@ -22,7 +22,7 @@ namespace AdminApp.ViewModels
 
         public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
     }
-
+    // Simple ICommand implementation for binding UI actions
     public class RelayCommand : ICommand
     {
         private readonly Action _execute;

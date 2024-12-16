@@ -1,45 +1,81 @@
-﻿using System.Collections.ObjectModel;
-using System.Threading.Tasks;
+﻿using AdminApp.Commands;
 using AdminApp.Models;
-using AdminApp.Services;
+using System.Collections.ObjectModel;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.Windows;
 
 namespace AdminApp.ViewModels
 {
-    public class UserListViewModel : ViewModelBase
+    public class UserListViewModel
     {
-        private readonly ApiService _apiService;
-
+        // Collection to hold all users
         public ObservableCollection<User> Users { get; set; } = new ObservableCollection<User>();
 
+        // Command for refreshing the user list
         public RelayCommand RefreshCommand { get; }
-        public RelayCommand<User> DeleteCommand { get; }
+
+        // Command for deleting a specific user
+        public RelayCommand DeleteCommand { get; }
+
+        private readonly HttpClient client;
 
         public UserListViewModel()
         {
-            _apiService = new ApiService();
+            client = new HttpClient();
 
-            RefreshCommand = new RelayCommand(async () => await LoadUsersAsync());
-            DeleteCommand = new RelayCommand<User>(async user => await DeleteUserAsync(user));
-
-            _ = LoadUsersAsync(); // Hent brugere ved opstart
+            // Define commands and bind their actions
+            RefreshCommand = new RelayCommand(async _ => await LoadUsers());
+            DeleteCommand = new RelayCommand(async param => await DeleteUser((User)param));
         }
 
-        private async Task LoadUsersAsync()
+        // Fetch all users from the backend API
+        private async Task LoadUsers()
         {
-            Users.Clear();
-            var users = await _apiService.GetUsersAsync();
-            foreach (var user in users)
+            try
             {
-                Users.Add(user);
+                var response = await client.GetAsync("http://localhost:5000/api/users");
+                if (response.IsSuccessStatusCode)
+                {
+                    var userList = await response.Content.ReadAsAsync<User[]>();
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        Users.Clear(); // Clear old users
+                        foreach (var user in userList)
+                            Users.Add(user);
+                    });
+                }
+                else
+                {
+                    MessageBox.Show("Failed to load users.");
+                }
+            }
+            catch
+            {
+                MessageBox.Show("Error: Unable to load users.");
             }
         }
 
-        private async Task DeleteUserAsync(User user)
+        // Delete a user from the backend API
+        private async Task DeleteUser(User user)
         {
-            if (user == null) return;
-
-            await _apiService.DeleteUserAsync(user.Id);
-            await LoadUsersAsync();
+            try
+            {
+                var response = await client.DeleteAsync($"http://localhost:5000/api/users/{user.Id}");
+                if (response.IsSuccessStatusCode)
+                {
+                    Users.Remove(user); // Remove user from collection
+                    MessageBox.Show("User deleted successfully.");
+                }
+                else
+                {
+                    MessageBox.Show("Failed to delete user.");
+                }
+            }
+            catch
+            {
+                MessageBox.Show("Error: Unable to delete user.");
+            }
         }
     }
 }
