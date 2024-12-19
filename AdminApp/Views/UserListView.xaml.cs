@@ -8,6 +8,7 @@ namespace AdminApp.Views
         public UserListView()
         {
             InitializeComponent();
+            // Sets the data context to the UserListViewModel to bind data to the UI
             DataContext = new UserListViewModel();
         }
     }
